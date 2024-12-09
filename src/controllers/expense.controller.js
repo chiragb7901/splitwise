@@ -3,6 +3,7 @@ import Balance from "../models/Balance";
 import Expense from "../models/Expense";
 import User from "../models/User";
 import * as Yup from "yup";
+import currencyConversion from "../utils/currencyConversion";
 
 const expenseController = {
   addExpense: async (req, res, next) => {
@@ -40,19 +41,16 @@ const expenseController = {
 
       for (let memberId of members) {
         const memberData = await User.findByPk(memberId);
-        const convertedAmount = perHeadSplit;
-        if (memberData.dataValues.currency != req.body.expenseData.currency) {
-          if (
-            !exchangeRates[fromCurrency] ||
-            !exchangeRates[fromCurrency][toCurrency]
-          ) {
-            throw new Error(
-              `Conversion rate from ${fromCurrency} to ${toCurrency} is not available.`
-            );
-          }
+        let convertedAmount = perHeadSplit;
+        const toCurrency = memberData.dataValues.currency;
+        const fromCurrency = req.body.expenseData.currency;
 
-          const exchangeRate = exchangeRates[fromCurrency][toCurrency];
-          convertedAmount = amount * exchangeRate;
+        if (fromCurrency != toCurrency) {
+          convertedAmount = currencyConversion(
+            fromCurrency,
+            toCurrency,
+            perHeadSplit
+          );
         }
 
         const newBalance = {
@@ -63,7 +61,6 @@ const expenseController = {
           currency: memberData.currency,
           expenseId: newExpense.id,
         };
-
 
         await Balance.create(newBalance);
       }
@@ -116,7 +113,7 @@ const expenseController = {
           member.dataValues.value = newPerHeadSplit;
 
           await Balance.update(
-            { amount: newPerHeadSplit }, 
+            { amount: newPerHeadSplit },
             { where: { id: member.dataValues.id } }
           );
         }
