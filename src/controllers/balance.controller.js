@@ -20,6 +20,19 @@ const balanceController = {
       next(error);
     }
   },
+
+  getAllBalances: async (req, res, next) => {
+    try {
+      const balances = await Balance.findAll();
+
+      return res.status(200).send({
+        status: "success",
+        data: balances,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
 };
 
 export default balanceController;
