@@ -102,18 +102,28 @@ const expenseController = {
       if (req.body.value) {
         const newValue = req.body.value;
 
-        const members = await Balance.findAndCountAll({
+        let members = await Balance.findAndCountAll({
           where: { expenseId: id },
         });
 
+        const ownerCurrency = expenseData.dataValues.currency;
         const numberOfMembers = members.count + 1;
         const newPerHeadSplit = req.body.value / numberOfMembers;
 
         for (let member of members.rows) {
-          member.dataValues.value = newPerHeadSplit;
+          const memberCurrency = member.dataValues.currency;
+          let updatedMemberBalance = newPerHeadSplit;
+
+          if (memberCurrency != ownerCurrency) {
+            updatedMemberBalance = currencyConversion(
+              ownerCurrency,
+              memberCurrency,
+              newPerHeadSplit
+            );
+          }
 
           await Balance.update(
-            { amount: newPerHeadSplit },
+            { amount: updatedMemberBalance },
             { where: { id: member.dataValues.id } }
           );
         }
